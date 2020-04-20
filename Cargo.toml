@@ -1,0 +1,18 @@
+[package]
+name = "event-server"
+version = "0.1.0"
+authors = ["Lalo Martins <lalo.martins@gmail.com>"]
+edition = "2018"
+
+[[bin]] # Bin to run the HelloWorld gRPC server
+name = "event-server"
+path = "src/server.rs"
+
+[dependencies]
+tonic = "0.2"
+prost = "0.6"
+prost-types = "0.6"
+tokio = { version = "0.2", features = ["macros"] }
+
+[build-dependencies]
+tonic-build = "0.2"

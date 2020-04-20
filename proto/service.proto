@@ -1,0 +1,34 @@
+syntax = "proto3";
+package eventserver;
+
+import "types.proto";
+
+message PushEventsRequest {
+  Event event = 1;
+}
+
+message PushEventsResponse {
+  EventOperationResult result = 1;
+}
+
+message GetEventsRequest {
+  EventsFilter filter = 1;
+}
+
+message GetEventsResponse {
+  EventOperationResult result = 1;
+}
+
+message WatchEventsRequest {
+  EventsFilter filter = 1;
+}
+
+message WatchEventsResponse {
+  EventStreamItem item = 1;
+}
+
+service EventServer {
+  rpc PushEvents (stream PushEventsRequest) returns (stream PushEventsResponse);
+  rpc GetEvents (GetEventsRequest) returns (stream GetEventsResponse);
+  rpc WatchEvents (WatchEventsRequest) returns (stream WatchEventsResponse);
+}
