@@ -1,12 +1,13 @@
 tonic::include_proto!("eventserver"); // The string specified here must match the proto package name
 
+use std::sync::Arc;
 use tokio::sync::mpsc;
 use tonic::{Request, Response, Status, Streaming};
 use super::storage::EventStorage;
 
 #[derive(Debug)]
 pub struct Server<StorageType: EventStorage> {
-    pub storage: StorageType,
+    pub storage: Arc<StorageType>,
 }
 
 #[tonic::async_trait]
@@ -15,22 +16,27 @@ impl<StorageType: EventStorage> event_server_server::EventServer for Server<Stor
 
     async fn push_events(
         &self,
-        _request: Request<Streaming<PushEventsRequest>>,
+        request: Request<Streaming<PushEventsRequest>>,
     ) -> Result<Response<Self::PushEventsStream>, Status> {
+        let mut stream = request.into_inner();
+
         let (mut tx, rx) = mpsc::channel(4);
+        let storage = self.storage.clone();
         tokio::spawn(async move {
-            tx.send(Ok(PushEventsResponse {
-                result: Some(EventOperationResult {
-                    item_content: Some(event_operation_result::ItemContent::Error(
-                        ErrorDetails {
-                            code: 501,
-                            message: "Not Implemented".to_string(),
-                        },
-                    )),
-                }),
-            }))
-            .await
-            .unwrap();
+            while let Ok(Some(req)) = stream.message().await {
+                if let Some(event) = req.event {
+                    tx.send(Ok(PushEventsResponse {
+                        result: Some(EventOperationResult {
+                            item_content: match storage.add(event).await {
+                                Ok(event) => Some(event_operation_result::ItemContent::Event(event)),
+                                Err(error) => Some(event_operation_result::ItemContent::Error(error)),
+                            }
+                        })
+                    }))
+                    .await
+                    .unwrap();
+                }
+            }
         });
 
         Ok(Response::new(rx))
