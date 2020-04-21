@@ -4,9 +4,9 @@ version = "0.1.0"
 authors = ["Lalo Martins <lalo.martins@gmail.com>"]
 edition = "2018"
 
-[[bin]] # Bin to run the HelloWorld gRPC server
+[[bin]]
 name = "event-server"
-path = "src/server.rs"
+path = "src/main.rs"
 
 [dependencies]
 tonic = "0.2"

@@ -18,8 +18,12 @@ message Event {
   google.protobuf.Timestamp timestamp = 7;
   Timezone timezone = 8;
   bool real_time = 9;
-  bytes additional = 10;
-  google.protobuf.Timestamp synced = 11;
+  google.protobuf.Timestamp synced = 10;
+  oneof additional {
+    bytes additional_bytes = 11;
+    string additional_str = 12;
+    string additional_yaml = 13;
+  }
 }
 
 message ErrorDetails {
