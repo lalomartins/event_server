@@ -2,12 +2,15 @@ tonic::include_proto!("eventserver"); // The string specified here must match th
 
 use tokio::sync::mpsc;
 use tonic::{Request, Response, Status, Streaming};
+use super::storage::EventStorage;
 
-#[derive(Debug, Default)]
-pub struct Server {}
+#[derive(Debug)]
+pub struct Server<StorageType: EventStorage> {
+    pub storage: StorageType,
+}
 
 #[tonic::async_trait]
-impl event_server_server::EventServer for Server {
+impl<StorageType: EventStorage> event_server_server::EventServer for Server<StorageType> {
     type PushEventsStream = mpsc::Receiver<Result<PushEventsResponse, Status>>;
 
     async fn push_events(
