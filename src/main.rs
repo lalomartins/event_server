@@ -2,6 +2,7 @@ use std::sync::Arc;
 use tonic::transport::Server;
 mod event_server;
 use event_server::memory_storage::MemoryStorage;
+use tokio::signal;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -11,8 +12,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Server::builder()
         .add_service(event_server::grpc::event_server_server::EventServerServer::new(server))
-        .serve(addr)
+        .serve_with_shutdown(addr, async {signal::ctrl_c().await.expect("failed to listen to interrupt signal");})
         .await?;
 
+    println!("Interrupted.");
     Ok(())
 }
