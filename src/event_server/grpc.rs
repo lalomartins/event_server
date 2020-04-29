@@ -23,8 +23,10 @@ impl<StorageType: EventStorage> event_server_server::EventServer for Server<Stor
         let (mut tx, rx) = mpsc::channel(4);
         let storage = self.storage.clone();
         tokio::spawn(async move {
+            // println!("Starting push events stream");
             while let Ok(Some(req)) = stream.message().await {
                 if let Some(event) = req.event {
+                    // println!("Got event {:?}", event);
                     tx.send(Ok(PushEventsResponse {
                         result: Some(EventOperationResult {
                             item_content: match storage.add(event).await {
@@ -35,8 +37,10 @@ impl<StorageType: EventStorage> event_server_server::EventServer for Server<Stor
                     }))
                     .await
                     .unwrap();
+                    // println!("Sent response");
                 }
             }
+            // println!("Done, closing");
         });
 
         Ok(Response::new(rx))
