@@ -9,7 +9,7 @@ use super::grpc::{Event, Timezone, ErrorDetails};
 pub trait EventStorage: Send + Sync + 'static {
     async fn add(&self, event: Event) -> Result<Event, ErrorDetails> {
         println!("Add event to unimplemented storage: {:?}", event);
-        return Result::Err(ErrorDetails {
+        Result::Err(ErrorDetails {
             code: 501,
             message: "Not Implemented".to_string(),
         })
