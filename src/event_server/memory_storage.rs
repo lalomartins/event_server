@@ -50,38 +50,53 @@ impl EventStorage for MemoryStorage {
     fn get(&self, filter: EventsFilter) -> SimpleEventsStream {
         let (mut tx, rx) = mpsc::channel(1);
         match self.by_account.read() {
-            Ok(lock) => {
-                match lock.get(&filter.account) {
+            Ok(lock) => match lock.get(&filter.account) {
+                None => {
+                    send_one!(
+                        tx,
+                        Result::Err(ErrorDetails {
+                            code: 404,
+                            message: "Account not found".to_string(),
+                        })
+                    );
+                }
+                Some(partition) => match partition.get(&filter.application) {
                     None => {
                         send_one!(
                             tx,
                             Result::Err(ErrorDetails {
                                 code: 404,
-                                message: "Account not found".to_string(),
+                                message: "Application not found".to_string(),
                             })
                         );
                     }
-                    Some(partition) => match partition.get(&filter.application) {
-                        None => {
-                            send_one!(
-                                tx,
-                                Result::Err(ErrorDetails {
-                                    code: 404,
-                                    message: "Application not found".to_string(),
-                                })
-                            );
-                        }
-                        Some(partition) => {
-                            let copy = partition.clone();
-                            tokio::spawn(async move {
-                                for event in copy {
+                    Some(partition) => {
+                        let copy = partition.clone();
+                        tokio::spawn(async move {
+                            for event in copy {
+                                let mut matches = true;
+                                if !filter.r#type.is_empty() {
+                                    matches = matches && event.r#type == filter.r#type;
+                                }
+                                if !filter.name.is_empty() {
+                                    matches = matches && event.name == filter.name;
+                                }
+                                if let Some(since) = &filter.since {
+                                    if let Some(synced) = &event.synced {
+                                        matches = matches
+                                            && ((synced.seconds > since.seconds)
+                                                || (synced.seconds == since.seconds
+                                                    && synced.nanos > since.nanos));
+                                    }
+                                }
+                                if matches {
                                     tx.send(Result::Ok(event.clone())).await.unwrap();
                                 }
-                            });
-                        },
-                    },
-                }
-            }
+                            }
+                        });
+                    }
+                },
+            },
             Err(error) => {
                 println!("Error opening storage: {:?}", error);
                 send_one!(
