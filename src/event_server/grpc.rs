@@ -50,22 +50,48 @@ impl<StorageType: EventStorage> event_server_server::EventServer for Server<Stor
 
     async fn get_events(
         &self,
-        _request: Request<GetEventsRequest>,
+        request: Request<GetEventsRequest>,
     ) -> Result<Response<Self::GetEventsStream>, Status> {
         let (mut tx, rx) = mpsc::channel(4);
+        let storage = self.storage.clone();
         tokio::spawn(async move {
-            tx.send(Ok(GetEventsResponse {
-                result: Some(EventOperationResult {
-                    item_content: Some(event_operation_result::ItemContent::Error(
-                        ErrorDetails {
-                            code: 501,
-                            message: "Not Implemented".to_string(),
-                        },
-                    )),
-                }),
-            }))
-            .await
-            .unwrap();
+            match &request.get_ref().filter {
+                None => {
+                    tx.send(Ok(GetEventsResponse {
+                        result: Some(EventOperationResult {
+                            item_content: Some(event_operation_result::ItemContent::Error(
+                                ErrorDetails {
+                                    code: 400,
+                                    message: "Filter required".to_string(),
+                                },
+                            )),
+                        }),
+                    }))
+                    .await
+                    .unwrap();
+                }
+                Some(filter) => {
+                    let mut storage_rx = storage.get(filter.clone());
+                    while let Some(res) = storage_rx.recv().await {
+                        match res {
+                            Ok(event) => tx.send(Ok(GetEventsResponse {
+                                result: Some(EventOperationResult {
+                                    item_content: Some(event_operation_result::ItemContent::Event(event)),
+                                }),
+                            }))
+                            .await
+                            .unwrap(),
+                            Err(error) => tx.send(Ok(GetEventsResponse {
+                                result: Some(EventOperationResult {
+                                    item_content: Some(event_operation_result::ItemContent::Error(error)),
+                                }),
+                            }))
+                            .await
+                            .unwrap(),
+                        }
+                    }
+                }
+            }
         });
 
         Ok(Response::new(rx))
