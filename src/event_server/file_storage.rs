@@ -54,7 +54,7 @@ impl EventStorage for FileStorage {
         let timestamp = Utc::now();
         let filename = timestamp.format("%Y-%m-%d.jsonl").to_string();
         let mut synced = event.clone();
-        synced.synced = Some(Timestamp::from(SystemTime::from(timestamp)));
+        synced.synced = Some(conversion::chrono_to_gprc(&timestamp));
         // TODO in a production setting, should lock first
         match fs::OpenOptions::new()
             .create(true)
@@ -81,17 +81,5 @@ impl EventStorage for FileStorage {
                 })
             }
         }
-        // match self.by_account.write() {
-        //     Ok(mut lock) => {
-        //         &lock.entry(event.account).or_default()
-        //             .entry(event.application).or_default()
-        //             .push(synced.clone());
-        //         Ok(synced)
-        //     }
-        //     Err(_) => Result::Err(ErrorDetails {
-        //         code: 500,
-        //         message: "Internal server error".to_string(),
-        //     })
-        // }
     }
 }
