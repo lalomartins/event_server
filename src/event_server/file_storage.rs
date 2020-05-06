@@ -1,21 +1,19 @@
-#![allow(unused_imports)]
-
+use std::convert::TryFrom;
 use std::fs;
-use std::io::Write;
+use std::io::{Write, BufReader, BufRead};
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
 
 use async_trait::async_trait;
 use base64;
-use chrono::{DateTime, Utc, Datelike};
+use chrono::{Utc, Datelike};
 extern crate json;
-use prost_types::Timestamp;
+// use prost_types::Timestamp;
 extern crate sanitize_filename;
 use tokio::sync::mpsc;
 
-use super::grpc::{ErrorDetails, Event, EventsFilter};
+use super::grpc::{ErrorDetails, Event, EventsFilter, server_error};
 use super::storage::{EventStorage, SimpleEventsStream};
-use super::{conversion, Bytes};
+use super::{conversion};
 
 #[doc = "Store events in memory, partitioned by account and application."]
 #[derive(Debug)]
@@ -57,10 +55,7 @@ impl EventStorage for FileStorage {
             .join(Path::new(&timestamp.year().to_string()));
         if let Err(e) = fs::create_dir_all(&path) {
             println!("Error creating file storage partition: {:?}", e);
-            return Result::Err(ErrorDetails {
-                code: 500,
-                message: "Internal server error".to_string(),
-            });
+            return Result::Err(server_error());
         }
         let filename = timestamp.format("%m-%d.jsonl").to_string();
         let mut synced = event.clone();
@@ -75,18 +70,12 @@ impl EventStorage for FileStorage {
                 Ok(_) => Ok(synced),
                 Err(e) => {
                     println!("Error writing to file storage: {:?}", e);
-                    Result::Err(ErrorDetails {
-                        code: 500,
-                        message: "Internal server error".to_string(),
-                    })
+                    Result::Err(server_error())
                 }
             },
             Err(e) => {
                 println!("Error creating file storage file: {:?}", e);
-                Result::Err(ErrorDetails {
-                    code: 500,
-                    message: "Internal server error".to_string(),
-                })
+                Result::Err(server_error())
             }
         }
     }
@@ -104,11 +93,8 @@ impl EventStorage for FileStorage {
             tokio::spawn(async move {
                 match path.read_dir() {
                     Err(error) => {
-                        println!("Error opening storage: {:?}", error);
-                        tx.send(Result::Err(ErrorDetails {
-                            code: 500,
-                            message: "Internal server error".to_string(),
-                        }))
+                        println!("Error opening storage partition {:?}: {:?}", path, error);
+                        tx.send(Result::Err(server_error()))
                         .await
                         .unwrap();
                     }
@@ -118,11 +104,8 @@ impl EventStorage for FileStorage {
                                 println!("year subpartition: {:?}", entry.path());
                                 match entry.path().read_dir() {
                                     Err(error) => {
-                                        println!("Error opening storage: {:?}", error);
-                                        tx.send(Result::Err(ErrorDetails {
-                                            code: 500,
-                                            message: "Internal server error".to_string(),
-                                        }))
+                                        println!("Error opening storage subpartition {:?}: {:?}",  entry.path(), error);
+                                        tx.send(Result::Err(server_error()))
                                         .await
                                         .unwrap();
                                     }
@@ -134,26 +117,28 @@ impl EventStorage for FileStorage {
                                                     .read(true)
                                                     .open(entry.path())
                                                 {
-                                                    Ok(mut f) => {
-                                                        // match f
-                                                        //     .write_all((json::stringify(&synced) + "\n").as_bytes())
-                                                        // {
-                                                        //     Ok(_) => Ok(synced),
-                                                        //     Err(e) => {
-                                                        //         println!("Error writing to file storage: {:?}", e);
-                                                        //         Result::Err(ErrorDetails {
-                                                        //             code: 500,
-                                                        //             message: "Internal server error".to_string(),
-                                                        //         })
-                                                        //     }
-                                                        // }
+                                                    Ok(f) => {
+                                                        for line in BufReader::new(f).lines() {
+                                                            match line {
+                                                                Ok(line) => {
+                                                                    match json::parse(&line) {
+                                                                        Ok(data) => tx.send(Event::try_from(&data)).await.unwrap(),
+                                                                        Err(e) => {
+                                                                            println!("Error parsing file storage file {:?}: {:?}", entry.path(), e);
+                                                                            tx.send(Result::Err(server_error())).await.unwrap();
+                                                                        }
+                                                                    }
+                                                                }
+                                                                Err(e) => {
+                                                                    println!("Error reading file storage file {:?}: {:?}", entry.path(), e);
+                                                                    tx.send(Result::Err(server_error())).await.unwrap();
+                                                                }
+                                                            }
+                                                        }
                                                     }
                                                     Err(e) => {
-                                                        println!("Error opening file storage file: {:?}", e);
-                                                        tx.send(Result::Err(ErrorDetails {
-                                                            code: 500,
-                                                            message: "Internal server error".to_string(),
-                                                        })).await.unwrap();
+                                                        println!("Error opening file storage file {:?}: {:?}", entry.path(), e);
+                                                        tx.send(Result::Err(server_error())).await.unwrap();
                                                     }
                                                 }
                                             }
@@ -165,76 +150,6 @@ impl EventStorage for FileStorage {
                     }
                 }
             });
-        // if let Err(e) = fs::create_dir_all(&path) {
-        //     println!("Error creating file storage partition: {:?}", e);
-        //     return Result::Err(ErrorDetails {
-        //         code: 500,
-        //         message: "Internal server error".to_string(),
-        //     });
-        // }
-        // match self.by_account.read() {
-        //     Ok(lock) => match lock.get(&filter.account) {
-        //         None => {
-        //             send_one!(
-        //                 tx,
-        //                 Result::Err(ErrorDetails {
-        //                     code: 404,
-        //                     message: "Account not found".to_string(),
-        //                 })
-        //             );
-        //         }
-        //         Some(partition) => match partition.get(&filter.application) {
-        //             None => {
-        //                 send_one!(
-        //                     tx,
-        //                     Result::Err(ErrorDetails {
-        //                         code: 404,
-        //                         message: "Application not found".to_string(),
-        //                     })
-        //                 );
-        //             }
-        //             Some(partition) => {
-        //                 let copy = partition.clone();
-        //                 tokio::spawn(async move {
-        //                     for event in copy {
-        //                         let mut matches = true;
-        //                         if !filter.r#type.is_empty() {
-        //                             matches = matches && event.r#type == filter.r#type;
-        //                         }
-        //                         if !filter.name.is_empty() {
-        //                             matches = matches && event.name == filter.name;
-        //                         }
-        //                         if let Some(since) = &filter.since {
-        //                             if let Some(synced) = &event.synced {
-        //                                 matches = matches
-        //                                     && ((synced.seconds > since.seconds)
-        //                                         || (synced.seconds == since.seconds
-        //                                             && synced.nanos > since.nanos));
-        //                             }
-        //                         }
-        //                         if matches {
-        //                             tx.send(Result::Ok(event.clone())).await.unwrap();
-        //                         }
-        //                     }
-        //                 });
-        //             }
-        //         },
-        //     },
-        //     Err(error) => {
-        //         println!("Error opening storage: {:?}", error);
-        //         send_one!(
-        //             tx,
-        //             Result::Err(ErrorDetails {
-        //                 code: 500,
-        //                 message: "Internal server error".to_string(),
-        //             })
-        //         );
-        //     }
-        // }
-        // send_one!(tx, Result::Err(ErrorDetails {
-        //     code: 501,
-        //     message: "Not Implemented".to_string(),
-        // }));
         } else {
             send_one!(
                 tx,

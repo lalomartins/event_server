@@ -5,7 +5,7 @@ use std::sync::RwLock;
 use std::time::SystemTime;
 use tokio::sync::mpsc;
 
-use super::grpc::{ErrorDetails, Event, EventsFilter};
+use super::grpc::{ErrorDetails, Event, EventsFilter, server_error};
 use super::storage::{EventStorage, SimpleEventsStream};
 use super::Bytes;
 
@@ -40,10 +40,7 @@ impl EventStorage for MemoryStorage {
                     .push(synced.clone());
                 Ok(synced)
             }
-            Err(_) => Result::Err(ErrorDetails {
-                code: 500,
-                message: "Internal server error".to_string(),
-            }),
+            Err(_) => Result::Err(server_error()),
         }
     }
 
@@ -101,10 +98,7 @@ impl EventStorage for MemoryStorage {
                 println!("Error opening storage: {:?}", error);
                 send_one!(
                     tx,
-                    Result::Err(ErrorDetails {
-                        code: 500,
-                        message: "Internal server error".to_string(),
-                    })
+                    Result::Err(server_error())
                 );
             }
         }

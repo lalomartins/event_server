@@ -5,6 +5,13 @@ use tokio::sync::mpsc;
 use tonic::{Request, Response, Status, Streaming};
 use super::storage::EventStorage;
 
+pub fn server_error() -> ErrorDetails {
+    ErrorDetails {
+        code: 500,
+        message: "Internal server error".to_string(),
+    }
+}
+
 #[derive(Debug)]
 pub struct Server<StorageType: EventStorage> {
     pub storage: Arc<StorageType>,
