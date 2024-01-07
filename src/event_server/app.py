@@ -1,7 +1,9 @@
-from typing import Annotated, Union
+from typing import Annotated, List, Union
 
-from fastapi import Body, FastAPI, HTTPException, Header
+from fastapi import Body, FastAPI, HTTPException, Header, Query
 from pydantic import UUID1
+
+from event_server.model.date import NaiveDatetimeAsFloat
 
 from .model.event import Event
 from .storage import Storage
@@ -14,8 +16,22 @@ def read_root():
     return {"Hello": "World"}
 
 
+@app.get("/events")
+def list_events(
+    application: Annotated[str, Header(alias="x-application")],
+    account: Annotated[str, Header(alias="x-account")],
+    since: Annotated[
+        NaiveDatetimeAsFloat | None,
+        Query(description="Filter events synced since this timestamp"),
+    ] = None,
+    max: Annotated[int, Query(description="Maximum items to return")] = 100,
+) -> List[Event]:
+    storage = Storage(application=application, account=account)
+    return storage.list(max=max, since=since)
+
+
 @app.get("/events/{event_id}")
-def read_item(
+def read_event(
     event_id: UUID1,
     application: Annotated[str, Header(alias="x-application")],
     account: Annotated[str, Header(alias="x-account")],

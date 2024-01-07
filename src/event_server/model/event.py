@@ -44,9 +44,10 @@ class Event(BaseModel):
                 )
                 del new_data["timezone"]
             if isinstance(new_data["synced"], list):
-                new_data["synced"] = datetime.fromtimestamp(
+                new_data["synced"] = (
                     new_data["synced"][0] + new_data["synced"][1] / 1000000
-                ).isoformat()
+                )
+
             if isinstance(new_data["additional"], dict):
                 additional = new_data["additional"]
                 match (next(iter(additional.keys()))):
