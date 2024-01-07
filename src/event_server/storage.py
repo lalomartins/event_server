@@ -2,7 +2,7 @@ import base64
 from pathlib import Path
 from pydantic import UUID1, ValidationError
 
-from .model.event import Event, sample
+from .model.event import Event
 
 
 class Storage:

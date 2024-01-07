@@ -6,6 +6,8 @@ from pydantic import (
     UUID1,
     BaseModel,
     NaiveDatetime,
+    field_serializer,
+    field_validator,
     model_validator,
 )
 
@@ -25,7 +27,16 @@ class Event(BaseModel):
     additional: Union[str, bytes]
     additional_type: Literal["text", "bytes", "yaml", "json"]
 
-    # todo(lalomartins): needs constructor
+    @field_serializer("synced")
+    def serialize_synced(self, synced: datetime, _info):
+        return synced.timestamp()
+
+    @field_validator("synced", mode="plain")
+    @classmethod
+    def validate_synced(cls, v: Union[datetime, float]):
+        if isinstance(v, float):
+            v = datetime.fromtimestamp(v, tz=None)
+        return v
 
     @model_validator(mode="before")
     @classmethod
@@ -61,19 +72,3 @@ class Event(BaseModel):
                         new_data["additional_type"] = "yaml"
             return new_data
         return data
-
-
-sample_old_json = """{
-    "uuid": "4+WBMKq3Ee6V23cA827xLQ==",
-    "account": "bGFsby5tYXJ0aW5zQGdtYWlsLmNvbQ==",
-    "application": "lalomartins.info/apps/weekly-goals",
-    "type": "weekly goals",
-    "name": "game dev",
-    "description": "bevy PoC",
-    "timestamp": [1704341725, 0],
-    "timezone": {"name": "Asia/Tokyo", "offset": 0},
-    "real_time": true,
-    "synced": [1704589621, 943800],
-    "additional": {"yaml": "foo: bar"}
-}"""
-sample = Event.model_validate_json(sample_old_json)
