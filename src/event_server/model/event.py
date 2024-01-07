@@ -31,10 +31,10 @@ class Event(BaseModel):
         if isinstance(data, dict):
             new_data = data.copy()
             if "timezone" in new_data:
-                new_data["timestamp"] = [
+                new_data["timestamp"] = (
                     new_data["timestamp"][0] + new_data["timestamp"][1] / 1000000,
                     new_data["timezone"]["name"],
-                ]
+                )
                 del new_data["timezone"]
             if isinstance(new_data["synced"], list):
                 new_data["synced"] = datetime.fromtimestamp(
