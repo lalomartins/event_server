@@ -1,10 +1,11 @@
 [tool.poetry]
 name = "event-server"
 version = "0.1.0"
-description = ""
+description = "Sync arbitrary events with clients (prototype) "
 authors = ["Lalo Martins <lalo.martins@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+packages = [{ include = "event_server", from = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.12"
