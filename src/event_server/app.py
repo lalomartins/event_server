@@ -1,14 +1,24 @@
+import os
 from typing import Annotated, List, Union
 
 from fastapi import Body, FastAPI, HTTPException, Header, Query
-from pydantic import UUID1
+from pydantic import UUID1, EmailStr
+from dotenv import load_dotenv
 
-from event_server.model.date import NaiveDatetimeAsFloat
+from event_server.basics import SimpleResponse
 
+from .routes import auth
+from .model.date import NaiveDatetimeAsFloat
 from .model.event import Event
 from .storage import Storage
 
+
+load_dotenv()
 app = FastAPI()
+auth.settings.load(os.environ)
+
+
+app.include_router(auth.router)
 
 
 @app.get("/")
@@ -19,7 +29,7 @@ def read_root():
 @app.get("/events")
 def list_events(
     application: Annotated[str, Header(alias="x-application")],
-    account: Annotated[str, Header(alias="x-account")],
+    account: Annotated[EmailStr, Header(alias="x-account")],
     since: Annotated[
         NaiveDatetimeAsFloat | None,
         Query(description="Filter events synced since this timestamp"),
@@ -34,7 +44,7 @@ def list_events(
 def read_event(
     event_id: UUID1,
     application: Annotated[str, Header(alias="x-application")],
-    account: Annotated[str, Header(alias="x-account")],
+    account: Annotated[EmailStr, Header(alias="x-account")],
 ) -> Event:
     storage = Storage(application=application, account=account)
     try:
@@ -47,7 +57,7 @@ def read_event(
 def post_item(
     event: Annotated[Event, Body()],
     application: Annotated[str, Header(alias="x-application")],
-    account: Annotated[str, Header(alias="x-account")],
-):
+    account: Annotated[EmailStr, Header(alias="x-account")],
+) -> SimpleResponse:
     storage = Storage(application=application, account=account)
-    return {"status": "ok"}
+    return SimpleResponse()
