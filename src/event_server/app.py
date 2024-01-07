@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException, Header
 from pydantic import UUID1
 
 from .model.event import Event, sample
+from .storage import Storage
 
 app = FastAPI()
 
@@ -13,16 +14,14 @@ def read_root():
     return {"Hello": "World"}
 
 
-@app.get("/events/{item_id}")
+@app.get("/events/{event_id}")
 def read_item(
-    item_id: UUID1,
+    event_id: UUID1,
     application: Annotated[str | None, Header(alias="x-application")] = None,
     account: Annotated[str | None, Header(alias="x-account")] = None,
 ):
-    if (
-        item_id == sample.uuid
-        and application == sample.application
-        and account == sample.account
-    ):
-        return sample
-    raise HTTPException(status_code=404, detail="Item not found")
+    storage = Storage(application=application, account=account)
+    try:
+        return storage.find_event(event_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Item not found")
