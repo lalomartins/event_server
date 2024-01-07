@@ -1,6 +1,6 @@
 from typing import Annotated, Self
 
-from fastapi import APIRouter, Body, Header
+from fastapi import APIRouter, Body, HTTPException, Header
 from pydantic import BaseModel, EmailStr, Field
 import pyotp
 
@@ -66,3 +66,21 @@ def register(
         )
     )
     return RegistrationResponse.from_totp(otp)
+
+
+class LoginRequest(BaseModel):
+    password: str = Field(min_length=12)
+    otp: str = Field(min_length=6, max_length=6)
+
+
+@router.post("/token-login")
+def token_login(
+    credentials: Annotated[LoginRequest, Body()],
+    account: Annotated[EmailStr, Header(alias="x-account")],
+    application: Annotated[str, Header(alias="x-application")] = "",
+) -> str:
+    storage = Storage(application=application, account=account)
+    if storage.get_credentials().verify(credentials.password, credentials.otp):
+        return "ok"
+    else:
+        raise HTTPException(status_code=401, detail="Bad credentials")

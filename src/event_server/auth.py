@@ -1,9 +1,11 @@
+from __future__ import annotations
 from datetime import datetime
 import os
-from typing import List
+from typing import List, Self
 from argon2 import PasswordHasher
 
 from pydantic import BaseModel, RootModel
+import pyotp
 
 
 hasher = PasswordHasher()
@@ -24,5 +26,29 @@ class AccountCredentials(BaseModel):
             created=datetime.now(),
         )
 
+    def verify(self, password: str, otp: str) -> bool:
+        return hasher.verify(self.password_hash, password) and pyotp.TOTP(
+            self.otp_secret
+        ).verify(otp)
 
-AccountCredentialsSet = RootModel[List[AccountCredentials]]
+
+class AccountCredentialsSet(RootModel):
+    root: List[AccountCredentials]
+
+    def __iter__(self):
+        return iter(self.root)
+
+    def __getitem__(self, index: int):
+        return self.root[index]
+
+    def append(self, item: AccountCredentials):
+        self.root.append(item)
+
+    def extend(self, other: Self):
+        self.root.extend(other.root)
+
+    def verify(self, password: str, otp: str) -> bool:
+        for credential in self.root:
+            if credential.verify(password, otp):
+                return True
+        return False

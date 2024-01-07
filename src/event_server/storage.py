@@ -19,6 +19,10 @@ class Storage:
         self.application = application
         self.account = account
         self.path = Path(f"storage/{base64.standard_b64encode(account.encode("utf-8")).decode("ascii").strip()}/{application.replace("/", "-")}")
+        if len(self.application) == 0:
+            self.user_storage = None
+        else:
+            self.user_storage = Storage("", account)
 
     def is_empty(self) -> bool:
         return len(self.application) == 0 or not self.path.exists()
@@ -71,7 +75,18 @@ class Storage:
                 existing_credentials = AccountCredentialsSet.model_validate_json(f.read())
         else:
             existing_credentials = AccountCredentialsSet([])
-        existing_credentials.root.append(credential)
+        existing_credentials.append(credential)
         self.path.mkdir(parents=True, exist_ok=True)
         with open(credentials_file, "w") as f:
             f.write(existing_credentials.model_dump_json(indent=0))
+
+    def get_credentials(self):
+        credentials_file = self.path / "credentials.json"
+        if credentials_file.exists():
+            with open(credentials_file) as f:
+                credentials = AccountCredentialsSet.model_validate_json(f.read())
+        else:
+            credentials = AccountCredentialsSet([])
+        if self.user_storage is not None:
+            credentials.extend(self.user_storage.get_credentials())
+        return credentials
