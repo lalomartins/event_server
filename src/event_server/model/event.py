@@ -1,7 +1,9 @@
+import base64
 from datetime import datetime
 from typing import Any, Union, Literal
 
 from pydantic import (
+    UUID1,
     BaseModel,
     NaiveDatetime,
     model_validator,
@@ -11,7 +13,7 @@ from .date import DateWithZone
 
 
 class Event(BaseModel):
-    uuid: str
+    uuid: UUID1
     account: str
     application: str
     type: str
@@ -30,6 +32,11 @@ class Event(BaseModel):
     def upgrade_json(cls, data: Any) -> Any:
         if isinstance(data, dict):
             new_data = data.copy()
+            if "@" not in new_data["account"]:
+                new_data["uuid"] = base64.decodebytes(bytes(new_data["uuid"], "ascii"))
+                new_data["account"] = base64.decodebytes(
+                    bytes(new_data["account"], "ascii")
+                )
             if "timezone" in new_data:
                 new_data["timestamp"] = (
                     new_data["timestamp"][0] + new_data["timestamp"][1] / 1000000,
