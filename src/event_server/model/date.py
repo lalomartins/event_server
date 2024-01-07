@@ -17,7 +17,7 @@ from pydantic_core import CoreSchema, core_schema
 utc = ZoneInfo("UTC")
 
 
-class DateWithZone(datetime):
+class DatetimeWithZone(datetime):
     """
     DateTime which dumps as [timestamp, tzname]
     """
@@ -43,3 +43,29 @@ class DateWithZone(datetime):
     @classmethod
     def serialize(cls, v: datetime, nxt: SerializerFunctionWrapHandler) -> str:
         return nxt((v.timestamp(), v.tzinfo.key))
+
+
+class NaiveDatetimeAsFloat(datetime):
+    """
+    Naive DateTime which dumps as timestamp (float)
+    """
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source: Type[Any], handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        return core_schema.no_info_after_validator_function(
+            cls.validate,
+            core_schema.float_schema(),
+            serialization=core_schema.wrap_serializer_function_ser_schema(
+                cls.serialize, when_used="json"
+            ),
+        )
+
+    @classmethod
+    def validate(cls, v: float):
+        return datetime.fromtimestamp(v)
+
+    @classmethod
+    def serialize(cls, v: datetime, nxt: SerializerFunctionWrapHandler) -> str:
+        return nxt(v.timestamp())

@@ -17,9 +17,9 @@ def read_root():
 @app.get("/events/{event_id}")
 def read_item(
     event_id: UUID1,
-    application: Annotated[str | None, Header(alias="x-application")] = None,
-    account: Annotated[str | None, Header(alias="x-account")] = None,
-):
+    application: Annotated[str, Header(alias="x-application")],
+    account: Annotated[str, Header(alias="x-account")],
+) -> Event:
     storage = Storage(application=application, account=account)
     try:
         return storage.find_event(event_id)
@@ -30,8 +30,8 @@ def read_item(
 @app.post("/events/")
 def post_item(
     event: Annotated[Event, Body()],
-    application: Annotated[str | None, Header(alias="x-application")] = None,
-    account: Annotated[str | None, Header(alias="x-account")] = None,
+    application: Annotated[str, Header(alias="x-application")],
+    account: Annotated[str, Header(alias="x-account")],
 ):
     storage = Storage(application=application, account=account)
     return {"status": "ok"}

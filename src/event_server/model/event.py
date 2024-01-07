@@ -11,7 +11,7 @@ from pydantic import (
     model_validator,
 )
 
-from .date import DateWithZone
+from .date import DatetimeWithZone, NaiveDatetimeAsFloat
 
 
 class Event(BaseModel):
@@ -21,22 +21,11 @@ class Event(BaseModel):
     type: str
     name: str
     description: str
-    timestamp: DateWithZone
+    timestamp: DatetimeWithZone
     real_time: bool
-    synced: NaiveDatetime
+    synced: NaiveDatetimeAsFloat
     additional: Union[str, bytes]
     additional_type: Literal["text", "bytes", "yaml", "json"]
-
-    @field_serializer("synced")
-    def serialize_synced(self, synced: datetime, _info):
-        return synced.timestamp()
-
-    @field_validator("synced", mode="plain")
-    @classmethod
-    def validate_synced(cls, v: Union[datetime, float]):
-        if isinstance(v, float):
-            v = datetime.fromtimestamp(v, tz=None)
-        return v
 
     @model_validator(mode="before")
     @classmethod
