@@ -1,9 +1,11 @@
 from __future__ import annotations
 from datetime import datetime
-import os
-from typing import List, Self
+from logging import info
+from typing import Annotated, List, Optional, Self
 
 from argon2 import PasswordHasher
+from fastapi import Depends, HTTPException, Header, status
+from fastapi.security import HTTPBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel, Field, RootModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -83,3 +85,38 @@ def create_access_token(account: str, application: str):
         settings.jwt_secret,
         algorithm=JWT_ALGORITHM,
     )
+
+
+class Authentication(BaseModel):
+    account: str
+    application: Optional[str]
+
+
+bearer = HTTPBearer()
+
+
+def read_authentication(
+    token: Annotated[str, Depends(bearer)],
+    application: Annotated[str, Header(alias="x-application")] = "",
+):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"Authorization": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(
+            token.credentials,
+            settings.jwt_secret,
+            algorithms=[JWT_ALGORITHM],
+            options={"verify_aud": False},
+        )
+        account: str = payload.get("sub")
+        auth_application: Optional[str] = payload.get("aud")
+        if auth_application is not None and auth_application != application:
+            raise credentials_exception
+        if account is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    return Authentication(account=account, application=auth_application)

@@ -56,7 +56,7 @@ class Storage:
                     if since.month > month or (since.month == month and since.day > day): continue
                     if since.month == month and since.day == day:
                         is_since_day = True
-                with day_partition.open as jf:
+                with day_partition.open() as jf:
                     for line in jf.readlines():
                         try:
                             event = Event.model_validate_json(line)

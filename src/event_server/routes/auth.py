@@ -1,6 +1,6 @@
 from typing import Annotated, Self
 
-from fastapi import APIRouter, Body, HTTPException, Header
+from fastapi import APIRouter, Body, HTTPException, Header, status
 from pydantic import BaseModel, EmailStr, Field
 import pyotp
 
@@ -10,7 +10,6 @@ from ..storage import Storage
 
 
 router = APIRouter(prefix="/auth")
-print(settings)
 
 
 class RegistrationRequest(BaseModel):
@@ -73,4 +72,6 @@ def token_login(
     if storage.get_credentials().verify(credentials.password, credentials.otp):
         return LoginResponse(token=create_access_token(account, application))
     else:
-        raise HTTPException(status_code=401, detail="Bad credentials")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Bad credentials"
+        )
