@@ -5,29 +5,12 @@ from pydantic import BaseModel, EmailStr, Field
 import pyotp
 
 from ..basics import SimpleResponse
-from ..auth import AccountCredentials
+from ..auth import AccountCredentials, settings
 from ..storage import Storage
 
 
 router = APIRouter(prefix="/auth")
-
-
-class AuthSettings:
-    otp_issuer: str
-    jwt_secret: str
-    can_register: bool
-
-    def load(self, source: dict) -> None:
-        self.otp_issuer = source.get("EVENT_SERVER_OTP_ISSUER", "EventServer dev")
-        self.jwt_secret = source.get("EVENT_SERVER_JWT_SECRET", "EventServer dev m0ck")
-        match source.get("EVENT_SERVER_REGISTRATION_OPEN", "").lower():
-            case "no" | "false" | "":
-                self.can_register = False
-            case _:
-                self.can_register = True
-
-
-settings = AuthSettings()
+print(settings)
 
 
 class RegistrationRequest(BaseModel):
@@ -53,6 +36,9 @@ def register(
     application: Annotated[str, Header(alias="x-application")] = "",
 ) -> RegistrationResponse:
     """Register new credentials for an account"""
+    if not settings.registration_open:
+        raise HTTPException(status_code=403, detail="Registration is closed")
+
     storage = Storage(application=application, account=credentials.account)
     otp = pyotp.TOTP(
         pyotp.random_base32(),

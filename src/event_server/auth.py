@@ -4,8 +4,20 @@ import os
 from typing import List, Self
 from argon2 import PasswordHasher
 
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel, Field, RootModel
+from pydantic_settings import BaseSettings, SettingsConfigDict
 import pyotp
+
+
+class AuthSettings(BaseSettings):
+    otp_issuer: str = Field(default="EventServer dev")
+    jwt_secret: str = Field(default="EventServer dev m0ck")
+    registration_open: bool = Field(default=False)
+
+    model_config = SettingsConfigDict(env_prefix="EVENT_SERVER_", env_file=".env")
+
+
+settings = AuthSettings()
 
 
 hasher = PasswordHasher()

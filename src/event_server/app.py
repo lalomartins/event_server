@@ -3,22 +3,19 @@ from typing import Annotated, List, Union
 
 from fastapi import Body, FastAPI, HTTPException, Header, Query
 from pydantic import UUID1, EmailStr
-from dotenv import load_dotenv
 
 from event_server.basics import SimpleResponse
 
-from .routes import auth
+from .routes.auth import router as auth_router
 from .model.date import NaiveDatetimeAsFloat
 from .model.event import Event
 from .storage import Storage
 
 
-load_dotenv()
 app = FastAPI()
-auth.settings.load(os.environ)
 
 
-app.include_router(auth.router)
+app.include_router(auth_router)
 
 
 @app.get("/")
