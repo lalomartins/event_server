@@ -68,6 +68,16 @@ class Storage:
                             warn("Validation error in storage, `%s` in %s", line, day_partition, exc_info=True)
         return events
 
+    def add_event(self, event: Event):
+        event.account = self.account
+        event.application = self.application
+        event.synced = datetime.now()
+        day_partition = self.path / str(event.synced.year) / f"{event.synced.month:02}-{event.synced.day:02}.jsonl"
+        day_partition.parent.mkdir(parents=True, exist_ok=True)
+        with day_partition.open("a") as jf:
+            jf.write(event.model_dump_json())
+            jf.write("\n")
+
     def add_credential(self, credential: AccountCredentials):
         credentials_file = self.path / "credentials.json"
         if credentials_file.exists():

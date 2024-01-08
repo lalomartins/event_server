@@ -47,7 +47,8 @@ def post_item(
     event: Annotated[Event, Body()],
     application: Annotated[str, Header(alias="x-application")],
     auth: Annotated[Authentication, Depends(read_authentication)],
-) -> SimpleResponse:
+) -> Event:
     """Record a new event"""
     storage = Storage(application=application, account=auth.account)
-    return SimpleResponse()
+    storage.add_event(event)
+    return event
