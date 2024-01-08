@@ -2,15 +2,18 @@ from __future__ import annotations
 from datetime import datetime
 import os
 from typing import List, Self
-from argon2 import PasswordHasher
 
+from argon2 import PasswordHasher
+from jose import JWTError, jwt
 from pydantic import BaseModel, Field, RootModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import pyotp
 
+JWT_ALGORITHM = "HS256"
+
 
 class AuthSettings(BaseSettings):
-    otp_issuer: str = Field(default="EventServer dev")
+    issuer: str = Field(default="EventServer dev")
     jwt_secret: str = Field(default="EventServer dev m0ck")
     registration_open: bool = Field(default=False)
 
@@ -64,3 +67,19 @@ class AccountCredentialsSet(RootModel):
             if credential.verify(password, otp):
                 return True
         return False
+
+
+def create_access_token(account: str, application: str):
+    payload = {
+        "sub": account,
+        "iss": settings.issuer,
+        "iat": datetime.now(),
+    }
+    if len(application) != 0:
+        payload["aud"] = application
+
+    return jwt.encode(
+        payload,
+        settings.jwt_secret,
+        algorithm=JWT_ALGORITHM,
+    )

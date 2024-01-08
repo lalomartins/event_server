@@ -5,7 +5,7 @@ from pydantic import BaseModel, EmailStr, Field
 import pyotp
 
 from ..basics import SimpleResponse
-from ..auth import AccountCredentials, settings
+from ..auth import AccountCredentials, create_access_token, settings
 from ..storage import Storage
 
 
@@ -43,7 +43,7 @@ def register(
     otp = pyotp.TOTP(
         pyotp.random_base32(),
         name=credentials.account,
-        issuer=application or settings.otp_issuer,
+        issuer=application or settings.issuer,
     )
     storage.add_credential(
         AccountCredentials.create(
@@ -59,14 +59,18 @@ class LoginRequest(BaseModel):
     otp: str = Field(min_length=6, max_length=6)
 
 
+class LoginResponse(SimpleResponse):
+    token: str
+
+
 @router.post("/token-login")
 def token_login(
     credentials: Annotated[LoginRequest, Body()],
     account: Annotated[EmailStr, Header(alias="x-account")],
     application: Annotated[str, Header(alias="x-application")] = "",
-) -> str:
+) -> LoginResponse:
     storage = Storage(application=application, account=account)
     if storage.get_credentials().verify(credentials.password, credentials.otp):
-        return "ok"
+        return LoginResponse(token=create_access_token(account, application))
     else:
         raise HTTPException(status_code=401, detail="Bad credentials")
