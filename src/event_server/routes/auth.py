@@ -68,6 +68,7 @@ def token_login(
     account: Annotated[EmailStr, Header(alias="x-account")],
     application: Annotated[str, Header(alias="x-application")] = "",
 ) -> LoginResponse:
+    """Authenticate with password and OTP and generate a new token"""
     storage = Storage(application=application, account=account)
     if storage.get_credentials().verify(credentials.password, credentials.otp):
         return LoginResponse(token=create_access_token(account, application))

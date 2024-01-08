@@ -99,6 +99,7 @@ def read_authentication(
     token: Annotated[str, Depends(bearer)],
     application: Annotated[str, Header(alias="x-application")] = "",
 ):
+    """Read and validate auth info from JWT in header"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",

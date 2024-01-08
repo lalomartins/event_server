@@ -23,6 +23,7 @@ def list_events(
     ] = None,
     max: Annotated[int, Query(description="Maximum items to return")] = 100,
 ) -> List[Event]:
+    """Get all events synced after a certain timestamp"""
     storage = Storage(application=application, account=auth.account)
     return storage.list(max=max, since=since)
 
@@ -33,6 +34,7 @@ def read_event(
     application: Annotated[str, Header(alias="x-application")],
     auth: Annotated[Authentication, Depends(read_authentication)],
 ) -> Event:
+    """Find a specific event by ID (slow)"""
     storage = Storage(application=application, account=auth.account)
     try:
         return storage.find_event(event_id)
@@ -46,5 +48,6 @@ def post_item(
     application: Annotated[str, Header(alias="x-application")],
     auth: Annotated[Authentication, Depends(read_authentication)],
 ) -> SimpleResponse:
+    """Record a new event"""
     storage = Storage(application=application, account=auth.account)
     return SimpleResponse()
