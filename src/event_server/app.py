@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from event_server.basics import SimpleResponse
+from event_server.model.basics import SimpleResponse
 
 from .routes.auth import router as auth_router
 from .routes.events import router as events_router

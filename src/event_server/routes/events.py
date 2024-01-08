@@ -5,7 +5,7 @@ from pydantic import UUID1, EmailStr
 
 
 from ..auth import Authentication, read_authentication
-from ..basics import SimpleResponse
+from ..model.basics import CreatedResponse, SimpleResponse
 from ..model.date import NaiveDatetimeAsFloat
 from ..model.event import Event
 from ..storage import Storage
@@ -47,8 +47,8 @@ def post_item(
     event: Annotated[Event, Body()],
     application: Annotated[str, Header(alias="x-application")],
     auth: Annotated[Authentication, Depends(read_authentication)],
-) -> Event:
+) -> CreatedResponse:
     """Record a new event"""
     storage = Storage(application=application, account=auth.account)
     storage.add_event(event)
-    return event
+    return CreatedResponse(id=event.uuid.hex, timestamp=event.synced)

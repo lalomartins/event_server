@@ -4,7 +4,7 @@ from fastapi import APIRouter, Body, HTTPException, Header, status
 from pydantic import BaseModel, EmailStr, Field
 import pyotp
 
-from ..basics import SimpleResponse
+from ..model.basics import SimpleResponse
 from ..auth import AccountCredentials, create_access_token, settings
 from ..storage import Storage
 

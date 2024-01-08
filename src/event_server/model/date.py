@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Tuple, Type
+from typing import Any, Tuple, Type, Union
 from typing_extensions import Annotated
 from zoneinfo import ZoneInfo
 
@@ -56,15 +56,19 @@ class NaiveDatetimeAsFloat(datetime):
     ) -> CoreSchema:
         return core_schema.no_info_after_validator_function(
             cls.validate,
-            core_schema.float_schema(),
+            core_schema.union_schema(
+                [core_schema.float_schema(), core_schema.datetime_schema()]
+            ),
             serialization=core_schema.wrap_serializer_function_ser_schema(
                 cls.serialize, when_used="json"
             ),
         )
 
     @classmethod
-    def validate(cls, v: float):
-        return datetime.fromtimestamp(v)
+    def validate(cls, v: Union[float, datetime]):
+        if isinstance(v, float):
+            return datetime.fromtimestamp(v)
+        return v
 
     @classmethod
     def serialize(cls, v: datetime, nxt: SerializerFunctionWrapHandler) -> str:
