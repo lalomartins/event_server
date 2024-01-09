@@ -123,7 +123,7 @@ class Storage:
         for year_partition in YearPartition.all(self.path):
             for day_partition in year_partition.subpartitions():
                 with day_partition.open() as jf:
-                    for line in jf.readlines():
+                    for line in jf:
                         try:
                             event = Event.model_validate_json(line)
                             if event.uuid == id:
@@ -154,7 +154,7 @@ class Storage:
                     ):
                         is_since_day = True
                 with day_partition.open() as jf:
-                    for line in jf.readlines():
+                    for line in jf:
                         try:
                             event = Event.model_validate_json(line)
                             if (not is_since_day) or since < event.synced:
