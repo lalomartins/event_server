@@ -30,35 +30,34 @@ class Event(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def upgrade_json(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            new_data = data.copy()
-            if "@" not in new_data["account"]:
-                new_data["uuid"] = base64.decodebytes(bytes(new_data["uuid"], "ascii"))
-                new_data["account"] = base64.decodebytes(
-                    bytes(new_data["account"], "ascii")
-                )
-            if "timezone" in new_data:
-                new_data["timestamp"] = (
-                    new_data["timestamp"][0] + new_data["timestamp"][1] / 1000000,
-                    new_data["timezone"]["name"],
-                )
-                del new_data["timezone"]
-            if isinstance(new_data["synced"], list):
-                new_data["synced"] = (
-                    new_data["synced"][0] + new_data["synced"][1] / 1000000
-                )
+        if not isinstance(data, dict):
+            return data
 
-            if isinstance(new_data["additional"], dict):
-                additional = new_data["additional"]
-                match (next(iter(additional.keys()))):
-                    case "str":
-                        new_data["additional"] = additional["str"]
-                        new_data["additional_type"] = "text"
-                    case "bytes":
-                        new_data["additional"] = additional["bytes"]
-                        new_data["additional_type"] = "bytes"
-                    case "yaml":
-                        new_data["additional"] = additional["yaml"]
-                        new_data["additional_type"] = "yaml"
-            return new_data
-        return data
+        new_data = data.copy()
+        if "@" not in new_data["account"]:
+            new_data["uuid"] = base64.decodebytes(bytes(new_data["uuid"], "ascii"))
+            new_data["account"] = base64.decodebytes(
+                bytes(new_data["account"], "ascii")
+            )
+        if "timezone" in new_data:
+            new_data["timestamp"] = (
+                new_data["timestamp"][0] + new_data["timestamp"][1] / 1000000,
+                new_data["timezone"]["name"],
+            )
+            del new_data["timezone"]
+        if isinstance(new_data["synced"], list):
+            new_data["synced"] = new_data["synced"][0] + new_data["synced"][1] / 1000000
+
+        if isinstance(new_data["additional"], dict):
+            additional = new_data["additional"]
+            match (next(iter(additional.keys()))):
+                case "str":
+                    new_data["additional"] = additional["str"]
+                    new_data["additional_type"] = "text"
+                case "bytes":
+                    new_data["additional"] = additional["bytes"]
+                    new_data["additional_type"] = "bytes"
+                case "yaml":
+                    new_data["additional"] = additional["yaml"]
+                    new_data["additional_type"] = "yaml"
+        return new_data
