@@ -10,10 +10,10 @@ from ..model.date import NaiveDatetimeAsFloat
 from ..model.event import Event
 from ..storage import Storage
 
-router = APIRouter(prefix="/auth")
+router = APIRouter(prefix="/events")
 
 
-@router.get("/events")
+@router.get("/")
 def list_events(
     application: Annotated[str, Header(alias="x-application")],
     auth: Annotated[Authentication, Depends(read_authentication)],
@@ -28,7 +28,7 @@ def list_events(
     return storage.list(max=max, since=since)
 
 
-@router.get("/events/{event_id}")
+@router.get("/{event_id}")
 def read_event(
     event_id: UUID1,
     application: Annotated[str, Header(alias="x-application")],
@@ -42,7 +42,7 @@ def read_event(
         raise HTTPException(status_code=404, detail="Item not found")
 
 
-@router.post("/events/")
+@router.post("/")
 def post_item(
     event: Annotated[Event, Body()],
     application: Annotated[str, Header(alias="x-application")],
