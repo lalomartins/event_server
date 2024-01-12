@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from .date import NaiveDatetimeAsFloat
+from .date import NaiveDatetimeAsLong
 
 
 class SimpleResponse(BaseModel):
@@ -11,4 +11,4 @@ class SimpleResponse(BaseModel):
 
 class CreatedResponse(SimpleResponse):
     id: str
-    timestamp: NaiveDatetimeAsFloat
+    timestamp: NaiveDatetimeAsLong

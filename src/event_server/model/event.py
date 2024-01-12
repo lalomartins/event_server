@@ -11,7 +11,7 @@ from pydantic import (
     model_validator,
 )
 
-from .date import DatetimeWithZone, NaiveDatetimeAsFloat
+from .date import DatetimeWithZone, NaiveDatetimeAsLong
 
 
 class Event(BaseModel):
@@ -23,7 +23,7 @@ class Event(BaseModel):
     description: str
     timestamp: DatetimeWithZone
     real_time: bool
-    synced: NaiveDatetimeAsFloat
+    synced: NaiveDatetimeAsLong
     additional: Union[str, bytes]
     additional_type: Literal["text", "bytes", "yaml", "json"]
 
@@ -41,12 +41,12 @@ class Event(BaseModel):
             )
         if "timezone" in new_data:
             new_data["timestamp"] = (
-                new_data["timestamp"][0] + new_data["timestamp"][1] / 1000000,
+                new_data["timestamp"][0],
                 new_data["timezone"]["name"],
             )
             del new_data["timezone"]
         if isinstance(new_data["synced"], list):
-            new_data["synced"] = new_data["synced"][0] + new_data["synced"][1] / 1000000
+            new_data["synced"] = new_data["synced"][0] * 1000000 + new_data["synced"][1]
 
         if isinstance(new_data["additional"], dict):
             additional = new_data["additional"]

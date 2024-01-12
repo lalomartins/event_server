@@ -6,7 +6,7 @@ from pydantic import UUID1
 
 from ..auth import Authentication, read_authentication
 from ..model.basics import CreatedResponse
-from ..model.date import NaiveDatetimeAsFloat
+from ..model.date import NaiveDatetimeAsLong
 from ..model.event import Event
 from ..storage import Storage
 
@@ -18,7 +18,7 @@ def list_events(
     application: Annotated[str, Header(alias="x-application")],
     auth: Annotated[Authentication, Depends(read_authentication)],
     since: Annotated[
-        NaiveDatetimeAsFloat | None,
+        NaiveDatetimeAsLong | None,
         Query(description="Filter events synced since this timestamp"),
     ] = None,
     max: Annotated[int, Query(description="Maximum items to return")] = 100,
