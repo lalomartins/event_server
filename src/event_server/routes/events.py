@@ -1,11 +1,11 @@
 from typing import Annotated, List
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query
-from pydantic import UUID1, EmailStr
+from pydantic import UUID1
 
 
 from ..auth import Authentication, read_authentication
-from ..model.basics import CreatedResponse, SimpleResponse
+from ..model.basics import CreatedResponse
 from ..model.date import NaiveDatetimeAsFloat
 from ..model.event import Event
 from ..storage import Storage
