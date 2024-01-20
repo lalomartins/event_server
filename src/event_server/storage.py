@@ -165,7 +165,7 @@ class Storage:
                             warn(
                                 "Validation error in storage, `%s` in %s",
                                 line,
-                                day_partition,
+                                day_partition.path,
                                 exc_info=True,
                             )
         return events

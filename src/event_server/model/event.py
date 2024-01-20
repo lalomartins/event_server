@@ -1,13 +1,9 @@
 import base64
-from datetime import datetime
-from typing import Any, Union, Literal
+from typing import Annotated, Any, Union, Literal
+from uuid import UUID
 
 from pydantic import (
-    UUID1,
     BaseModel,
-    NaiveDatetime,
-    field_serializer,
-    field_validator,
     model_validator,
 )
 
@@ -15,7 +11,7 @@ from .date import DatetimeWithZone, NaiveDatetimeAsLong
 
 
 class Event(BaseModel):
-    uuid: UUID1
+    uuid: UUID
     account: str
     application: str
     type: str
