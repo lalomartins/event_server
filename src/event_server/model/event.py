@@ -1,5 +1,5 @@
 import base64
-from typing import Annotated, Any, Union, Literal
+from typing import Annotated, Any, Optional, Union, Literal
 from uuid import UUID
 
 from pydantic import (
@@ -19,7 +19,7 @@ class Event(BaseModel):
     description: str
     timestamp: DatetimeWithZone
     real_time: bool
-    synced: NaiveDatetimeAsLong
+    synced: Optional[NaiveDatetimeAsLong]
     additional: Union[str, bytes]
     additional_type: Literal["text", "bytes", "yaml", "json"]
 
@@ -30,11 +30,13 @@ class Event(BaseModel):
             return data
 
         new_data = data.copy()
-        if "@" not in new_data["account"]:
+        if len(new_data["account"]) and "@" not in new_data["account"]:
             new_data["uuid"] = base64.decodebytes(bytes(new_data["uuid"], "ascii"))
             new_data["account"] = base64.decodebytes(
                 bytes(new_data["account"], "ascii")
             )
+        # elif "-" in new_data["uuid"]:
+        #     new_data["uuid"] = UUID(new_data["uuid"])
         if "timezone" in new_data:
             new_data["timestamp"] = (
                 new_data["timestamp"][0],
