@@ -1,10 +1,11 @@
 from abc import abstractmethod
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta
 import itertools
 from logging import warn
 from pathlib import Path
-from typing import TextIO, Generator, Self, Union
+from typing import Optional, TextIO, Generator, Self, Union
+from uuid import UUID
 import zipfile
 
 from pydantic import UUID1, ValidationError
@@ -132,32 +133,37 @@ class Storage:
                             pass
         raise KeyError(id)
 
-    def list(self, max: int = 100, since: Union[datetime, None] = None):
+    def list(self, max: int = 100, since: Optional[datetime] = None, after: Optional[UUID] = None):
         if len(self.application) == 0:
             return []
 
+        if since is None:
+            ref_date = datetime.fromtimestamp(0)
+        else:
+            ref_date = since - timedelta(days=1)
+        after_matched = after is None
+
         events = []
         for year_partition in YearPartition.all(self.path):
-            if since is not None and since.year > year_partition.year:
+            if ref_date.year > year_partition.year:
                 continue
+
             for day_partition in year_partition.subpartitions():
-                is_since_day = False
-                if since is not None and since.year == year_partition.year:
-                    if since.month > day_partition.month or (
-                        since.month == day_partition.month
-                        and since.day > day_partition.day
+                if ref_date.year == year_partition.year:
+                    if ref_date.month > day_partition.month or (
+                        ref_date.month == day_partition.month
+                        and ref_date.day > day_partition.day
                     ):
                         continue
-                    if (
-                        since.month == day_partition.month
-                        and since.day == day_partition.day
-                    ):
-                        is_since_day = True
                 with day_partition.open() as jf:
                     for line in jf:
                         try:
                             event = Event.model_validate_json(line)
-                            if (not is_since_day) or since < event.synced:
+                            if not after_matched:
+                                if event.uuid == after:
+                                    after_matched = True
+                                continue
+                            if after is not None or since is None or since <= event.synced:
                                 events.append(event)
                                 if len(events) >= max:
                                     return events
